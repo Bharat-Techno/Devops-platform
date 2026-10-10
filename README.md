@@ -6,8 +6,6 @@
 
 <p align="center">
 
-<img src="docs/images/architecture.png" width="100%">
-
 </p>
 
 ![GitHub](https://img.shields.io/badge/GitHub-Source%20Control-black?logo=github)
@@ -200,7 +198,6 @@ This repository is part of a larger Enterprise Platform Engineering portfolio.
 
 # 🏛 Enterprise Architecture
 
-> Replace with your Architecture Hero Image
 
 ```text
                                         Developer
