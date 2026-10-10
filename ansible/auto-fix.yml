@@ -1,0 +1,96 @@
+- name: Auto-fix node issues
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    - name: Ensure apt cache updated (with retry)
+      apt:
+        update_cache: yes
+      register: apt_update
+      retries: 3
+      delay: 5
+      until: apt_update is succeeded
+
+    # ----------------------------
+    # Docker Setup
+    # ----------------------------
+
+    - name: Install Docker if missing
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Ensure Docker is running
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    # ----------------------------
+    # Kubernetes Services
+    # ----------------------------
+
+    - name: Install kubelet if missing
+      apt:
+        name: kubelet
+        state: present
+      register: kubelet_install
+      failed_when: false
+
+    - name: Ensure kubelet is running
+      service:
+        name: kubelet
+        state: started
+        enabled: true
+      failed_when: false
+
+    # ----------------------------
+    # Swap Fix
+    # ----------------------------
+
+    - name: Disable swap immediately
+      command: swapoff -a
+      when: ansible_swaptotal_mb > 0
+
+    - name: Disable swap permanently
+      replace:
+        path: /etc/fstab
+        regexp: '^.*swap.*$'
+        replace: '# swap disabled by ansible'
+
+    # ----------------------------
+    # Kernel settings
+    # ----------------------------
+
+    - name: Ensure br_netfilter module loaded
+      modprobe:
+        name: br_netfilter
+        state: present
+
+    - name: Set sysctl params
+      sysctl:
+        name: net.bridge.bridge-nf-call-iptables
+        value: 1
+        state: present
+        reload: yes
+
+    # ----------------------------
+    # Final verification
+    # ----------------------------
+
+    - name: Gather service facts
+      service_facts:
+
+    - name: Show final service status
+      debug:
+        msg:
+          - "Docker: {{ ansible_facts.services['docker.service'].state | default('not found') }}"
+          - "Kubelet: {{ ansible_facts.services['kubelet.service'].state | default('not found') }}"

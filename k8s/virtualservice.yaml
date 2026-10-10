@@ -1,0 +1,18 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: hello-app
+  namespace:  project1
+spec:
+  hosts:
+    - hello
+    - hello.hello.svc.cluster.local
+    - hello.192.168.56.101.nip.io   # 🔥 your ingress domain
+  gateways:
+    - istio-system/istio-gateway
+  http:
+    - route:
+        - destination:
+            host: hello-app
+            port:
+              number: 80

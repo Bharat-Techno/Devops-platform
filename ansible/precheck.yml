@@ -1,0 +1,66 @@
+- name: Pre-deployment validation
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    min_disk_available_gb: 5
+
+  tasks:
+
+    - name: Check available disk space
+      shell: df -BG / | tail -1 | awk '{print $4}' | sed 's/G//'
+      register: disk_space
+      changed_when: false
+
+    - name: Fail if disk space is low
+      fail:
+        msg: "Disk space is below required threshold!"
+      when: disk_space.stdout | int < min_disk_available_gb
+
+    - name: Show disk space
+      debug:
+        msg: "Available disk: {{ disk_space.stdout }} GB"
+
+    # ----------------------------
+    # Service Checks
+    # ----------------------------
+
+    - name: Gather service facts
+      service_facts:
+
+    - name: Ensure Docker is running
+      fail:
+        msg: "Docker is NOT running!"
+      when: "'docker.service' not in ansible_facts.services or ansible_facts.services['docker.service'].state != 'running'"
+
+    - name: Ensure kubelet is running
+      fail:
+        msg: "Kubelet is NOT running!"
+      when: "'kubelet.service' not in ansible_facts.services or ansible_facts.services['kubelet.service'].state != 'running'"
+
+    # ----------------------------
+    # Swap Check
+    # ----------------------------
+
+    - name: Check swap status
+      shell: swapon --summary
+      register: swap_status
+      changed_when: false
+
+    - name: Fail if swap is enabled
+      fail:
+        msg: "Swap is enabled! Kubernetes requires swap off."
+      when: swap_status.stdout != ""
+
+    # ----------------------------
+    # Node Info
+    # ----------------------------
+
+    - name: Show node details
+      debug:
+        msg:
+          - "Hostname: {{ ansible_hostname }}"
+          - "OS: {{ ansible_distribution }}"
+          - "CPU: {{ ansible_processor_vcpus }}"
+          - "Memory: {{ ansible_memtotal_mb }} MB"

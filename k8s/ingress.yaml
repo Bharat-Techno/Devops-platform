@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello-app
+  namespace: project1
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - hello.192.168.56.100.nip.io
+    secretName: wildcard-tls
+  rules:
+  - host: hello.192.168.56.100.nip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: hello-app
+            port:
+              number: 80
